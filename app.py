@@ -149,6 +149,10 @@ def poll_results(poll_id):
         options = c.fetchall()
     return render_template('polls/results.html', question=question, options=options, poll_id=poll_id, title=f"Results: {question}")
 
+
+init_db()
+
+
 if __name__ == '__main__':
-    init_db()
+
     app.run(debug=True)
