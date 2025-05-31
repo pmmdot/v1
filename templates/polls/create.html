@@ -1,0 +1,48 @@
+{% extends "layout.html" %} {% block content %}
+<div class="content-section">
+  <form method="POST">
+    <fieldset class="form-group">
+      <legend class="border-bottom mb-4">Create New Poll</legend>
+
+      <div class="form-group mb-4">
+        <label class="form-control-label" for="question">Poll Question</label>
+        <input
+          class="form-control form-control-lg"
+          id="question"
+          name="question"
+          type="text"
+          placeholder="What would you like to ask?"
+          required
+        />
+        <small class="form-text text-muted"
+          >Make your question clear and engaging</small
+        >
+      </div>
+
+      <div class="form-group mb-4">
+        <label class="form-control-label">Answer Options</label>
+        {% for i in range(5) %}
+        <div class="mb-2">
+          <input
+            class="form-control"
+            name="options"
+            type="text"
+            placeholder="Option {{ i+1 }}{% if i >= 2 %} (optional){% endif %}"
+          />
+        </div>
+        {% endfor %}
+        <small class="form-text text-muted"
+          >Add at least 2 options. Empty options will be ignored.</small
+        >
+      </div>
+    </fieldset>
+
+    <div class="form-group d-flex gap-2">
+      <input class="btn btn-primary" type="submit" value="Create Poll" />
+      <a href="{{ url_for('polls_index') }}" class="btn btn-outline-secondary"
+        >Cancel</a
+      >
+    </div>
+  </form>
+</div>
+{% endblock content %}

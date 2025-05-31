@@ -1,0 +1,25 @@
+{% extends "layout.html" %} {% block content %} {% for post in posts %}
+<article class="media content-section">
+  <div class="media-body">
+    <div class="article-metadata">
+      <h6 class="me-2 mb-0">PMM</h6>
+      <small class="date">{{ post.date_posted }}</small>
+    </div>
+    <h2>
+      {% if post.link %}
+      <a class="article-title" href="{{ post.link }}">{{ post.title }}</a>
+      {% else %}
+      <span class="article-title">{{ post.title }}</span>
+      {% endif %}
+    </h2>
+    <p class="article-content">{{ post.content }}</p>
+    {% if post.link %}
+    <div class="mt-3">
+      <a href="{{ post.link }}" class="btn btn-outline-info btn-sm">
+        <i class="fas fa-arrow-right"></i> Access {{ post.title }}
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</article>
+{% endfor %} {% endblock content %}
