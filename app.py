@@ -311,7 +311,7 @@ def poll_results(poll_id):
     return render_template('polls/results.html', question=question, options=options, poll_id=poll_id, title=f"Results: {question}")
 
 # Initialize database when app starts
-init_db()
+#init_db()
 
 if __name__ == '__main__':
     app.run(debug=True)
