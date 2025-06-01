@@ -373,3 +373,37 @@ legend {
 .form-text {
   color: #adb5bd !important;
 }
+/* Add this to your main.css file - Updated polling header styles */
+
+.polling-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  gap: 1.5rem;
+}
+
+.polling-header div {
+  flex: 1;
+}
+
+.polling-header .btn {
+  margin-left: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Better responsive behavior */
+@media (max-width: 768px) {
+  .polling-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .polling-header .btn {
+    align-self: center;
+    width: auto;
+    margin-top: 0.5rem;
+  }
+}
