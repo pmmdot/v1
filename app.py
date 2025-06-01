@@ -1,35 +1,163 @@
 from flask import Flask, render_template, flash, redirect, url_for, request
 from forms import Reg_form, Login_form
-import sqlite3
+import os
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'iwhebihewbcwhbihcebiwhi879834918292918942812948'
 
-def init_db():
-    with sqlite3.connect("polls.db") as conn:
-        c = conn.cursor()
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS polls (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                question TEXT NOT NULL
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS options (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                poll_id INTEGER,
-                option_text TEXT,
-                votes INTEGER DEFAULT 0,
-                FOREIGN KEY (poll_id) REFERENCES polls(id)
-            )
-        """)
+# Determine if we're in production (Render) or development
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Production - use PostgreSQL
+    import psycopg2
+    
+    def get_db_connection():
+        url = urlparse(DATABASE_URL)
+        conn = psycopg2.connect(
+            host=url.hostname,
+            port=url.port,
+            database=url.path[1:],
+            user=url.username,
+            password=url.password,
+            sslmode='require'
+        )
+        return conn
+    
+    def init_db():
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS polls (
+                    id SERIAL PRIMARY KEY,
+                    question TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS options (
+                    id SERIAL PRIMARY KEY,
+                    poll_id INTEGER REFERENCES polls(id) ON DELETE CASCADE,
+                    option_text TEXT NOT NULL,
+                    votes INTEGER DEFAULT 0
+                )
+            """)
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print("PostgreSQL database initialized successfully!")
+            
+        except Exception as e:
+            print(f"Error initializing PostgreSQL database: {e}")
+    
+    # PostgreSQL query functions
+    def execute_query(query, params=None, fetch=False):
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            if fetch == 'one':
+                result = cursor.fetchone()
+            elif fetch == 'all':
+                result = cursor.fetchall()
+            else:
+                result = None
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return result
+            
+        except Exception as e:
+            print(f"Database error: {e}")
+            return None
+
+else:
+    # Development - use SQLite
+    import sqlite3
+    
+    def get_db_connection():
+        conn = sqlite3.connect("polls.db")
+        conn.row_factory = sqlite3.Row
+        return conn
+    
+    def init_db():
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS polls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    question TEXT NOT NULL
+                )
+            """)
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS options (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    poll_id INTEGER,
+                    option_text TEXT,
+                    votes INTEGER DEFAULT 0,
+                    FOREIGN KEY (poll_id) REFERENCES polls(id)
+                )
+            """)
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            print("SQLite database initialized successfully!")
+            
+        except Exception as e:
+            print(f"Error initializing SQLite database: {e}")
+    
+    # SQLite query functions
+    def execute_query(query, params=None, fetch=False):
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            if fetch == 'one':
+                result = cursor.fetchone()
+                if result:
+                    result = tuple(result)
+            elif fetch == 'all':
+                result = cursor.fetchall()
+                if result:
+                    result = [tuple(row) for row in result]
+            else:
+                result = None
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return result
+            
+        except Exception as e:
+            print(f"Database error: {e}")
+            return None
 
 post = [
     {
         'title': 'Math Timed Quiz',
         'content': 'A Simple quiz which checks how fast u can do simple addition/subtraction/multiplication problems. We have multiple difficulty modes',
         'date_posted': 'May 29, 2025',
-        'link': '/quiz'  # Future link for math quiz
+        'link': '/quiz'
     },
     {
         'title': 'Polling System',
@@ -65,10 +193,15 @@ def about():
 # Polling system routes
 @app.route('/polls')
 def polls_index():
-    with sqlite3.connect("polls.db") as conn:
-        c = conn.cursor()
-        c.execute("SELECT * FROM polls ORDER BY id DESC")
-        polls = c.fetchall()
+    if DATABASE_URL:
+        polls = execute_query("SELECT * FROM polls ORDER BY id DESC", fetch='all')
+    else:
+        polls = execute_query("SELECT * FROM polls ORDER BY id DESC", fetch='all')
+    
+    if polls is None:
+        polls = []
+        flash('Error loading polls', 'danger')
+    
     return render_template('polls/index.html', polls=polls, title="Polls")
 
 @app.route('/polls/create', methods=['GET', 'POST'])
@@ -83,31 +216,51 @@ def create_poll():
         if len(valid_options) < 2:
             flash('Please provide at least 2 options for your poll.', 'danger')
             return redirect(url_for('create_poll'))
-            
-        with sqlite3.connect("polls.db") as conn:
-            c = conn.cursor()
-            c.execute("INSERT INTO polls (question) VALUES (?)", (question,))
-            poll_id = c.lastrowid
-            for text in valid_options:
-                c.execute("INSERT INTO options (poll_id, option_text) VALUES (?, ?)", (poll_id, text))
-            conn.commit()
         
-        flash('Poll created successfully!', 'success')
-        return redirect(url_for('polls_index'))
+        try:
+            if DATABASE_URL:
+                # PostgreSQL
+                poll_id = execute_query("INSERT INTO polls (question) VALUES (%s) RETURNING id", (question,), fetch='one')
+                if poll_id:
+                    poll_id = poll_id[0]
+                    for text in valid_options:
+                        execute_query("INSERT INTO options (poll_id, option_text) VALUES (%s, %s)", (poll_id, text))
+            else:
+                # SQLite
+                execute_query("INSERT INTO polls (question) VALUES (?)", (question,))
+                # Get the last inserted poll ID
+                result = execute_query("SELECT last_insert_rowid()", fetch='one')
+                if result:
+                    poll_id = result[0]
+                    for text in valid_options:
+                        execute_query("INSERT INTO options (poll_id, option_text) VALUES (?, ?)", (poll_id, text))
+            
+            flash('Poll created successfully!', 'success')
+            return redirect(url_for('polls_index'))
+            
+        except Exception as e:
+            flash(f'Error creating poll: {str(e)}', 'danger')
+            return redirect(url_for('create_poll'))
+    
     return render_template('polls/create.html', title="Create Poll")
 
 @app.route('/polls/<int:poll_id>')
 def view_poll(poll_id):
-    with sqlite3.connect("polls.db") as conn:
-        c = conn.cursor()
-        c.execute("SELECT question FROM polls WHERE id=?", (poll_id,))
-        result = c.fetchone()
-        if not result:
-            flash('Poll not found.', 'danger')
-            return redirect(url_for('polls_index'))
-        question = result[0]
-        c.execute("SELECT id, option_text FROM options WHERE poll_id=?", (poll_id,))
-        options = c.fetchall()
+    if DATABASE_URL:
+        question_result = execute_query("SELECT question FROM polls WHERE id=%s", (poll_id,), fetch='one')
+        options = execute_query("SELECT id, option_text FROM options WHERE poll_id=%s", (poll_id,), fetch='all')
+    else:
+        question_result = execute_query("SELECT question FROM polls WHERE id=?", (poll_id,), fetch='one')
+        options = execute_query("SELECT id, option_text FROM options WHERE poll_id=?", (poll_id,), fetch='all')
+    
+    if not question_result:
+        flash('Poll not found.', 'danger')
+        return redirect(url_for('polls_index'))
+    
+    question = question_result[0]
+    if options is None:
+        options = []
+    
     return render_template('polls/poll.html', poll_id=poll_id, question=question, options=options, title=f"Poll: {question}")
 
 @app.route('/polls/vote/<int:option_id>', methods=['POST'])
@@ -115,44 +268,50 @@ def vote(option_id):
     # Get the selected option from the form
     selected_option_id = request.form.get('option_id', type=int)
     
-    # Use the selected option ID from form, not URL parameter
     if selected_option_id:
         option_id = selected_option_id
     
-    with sqlite3.connect("polls.db") as conn:
-        c = conn.cursor()
-        # Update votes for the correct option
-        c.execute("UPDATE options SET votes = votes + 1 WHERE id=?", (option_id,))
-        conn.commit()
-        # Get poll_id for redirect
-        c.execute("SELECT poll_id FROM options WHERE id=?", (option_id,))
-        result = c.fetchone()
+    try:
+        if DATABASE_URL:
+            execute_query("UPDATE options SET votes = votes + 1 WHERE id=%s", (option_id,))
+            result = execute_query("SELECT poll_id FROM options WHERE id=%s", (option_id,), fetch='one')
+        else:
+            execute_query("UPDATE options SET votes = votes + 1 WHERE id=?", (option_id,))
+            result = execute_query("SELECT poll_id FROM options WHERE id=?", (option_id,), fetch='one')
+        
         if not result:
             flash('Invalid vote.', 'danger')
             return redirect(url_for('polls_index'))
+        
         poll_id = result[0]
-    
-    flash('Your vote has been recorded!', 'success')
-    return redirect(url_for('poll_results', poll_id=poll_id))
+        flash('Your vote has been recorded!', 'success')
+        return redirect(url_for('poll_results', poll_id=poll_id))
+        
+    except Exception as e:
+        flash(f'Error recording vote: {str(e)}', 'danger')
+        return redirect(url_for('polls_index'))
 
 @app.route('/polls/results/<int:poll_id>')
 def poll_results(poll_id):
-    with sqlite3.connect("polls.db") as conn:
-        c = conn.cursor()
-        c.execute("SELECT question FROM polls WHERE id=?", (poll_id,))
-        result = c.fetchone()
-        if not result:
-            flash('Poll not found.', 'danger')
-            return redirect(url_for('polls_index'))
-        question = result[0]
-        c.execute("SELECT option_text, votes FROM options WHERE poll_id=? ORDER BY votes DESC", (poll_id,))
-        options = c.fetchall()
+    if DATABASE_URL:
+        question_result = execute_query("SELECT question FROM polls WHERE id=%s", (poll_id,), fetch='one')
+        options = execute_query("SELECT option_text, votes FROM options WHERE poll_id=%s ORDER BY votes DESC", (poll_id,), fetch='all')
+    else:
+        question_result = execute_query("SELECT question FROM polls WHERE id=?", (poll_id,), fetch='one')
+        options = execute_query("SELECT option_text, votes FROM options WHERE poll_id=? ORDER BY votes DESC", (poll_id,), fetch='all')
+    
+    if not question_result:
+        flash('Poll not found.', 'danger')
+        return redirect(url_for('polls_index'))
+    
+    question = question_result[0]
+    if options is None:
+        options = []
+    
     return render_template('polls/results.html', question=question, options=options, poll_id=poll_id, title=f"Results: {question}")
 
-
+# Initialize database when app starts
 init_db()
 
-
 if __name__ == '__main__':
-
     app.run(debug=True)

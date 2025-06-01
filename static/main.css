@@ -1,3 +1,6 @@
+/* Import Poppins font */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
 body {
   background: #000000;
   color: #d3d3d3; /* Softened white for body text */
@@ -33,6 +36,12 @@ legend {
 
 .bg-steel {
   background-color: #3c6685;
+}
+
+/* Apply Poppins font to navbar brand (PMM) */
+.navbar-brand {
+  font-family: "Poppins", sans-serif !important;
+  font-weight: 600;
 }
 
 .site-header .navbar-nav .nav-link {
@@ -71,11 +80,12 @@ legend {
 
 .article-title {
   color: #d3d3d3; /* Softened white */
+  text-decoration: none !important; /* Remove underline from article titles */
 }
 
 a.article-title:hover {
   color: #ffffff;
-  text-decoration: none;
+  text-decoration: none !important; /* Ensure no underline on hover */
 }
 
 .article-content {
@@ -229,6 +239,15 @@ a[href*="login"] {
   color: #ffffff;
 }
 
+/* Add spacing for create button */
+.polling-header {
+  margin-bottom: 1.5rem;
+}
+
+.polling-header .btn {
+  margin-left: 1rem;
+}
+
 /* Responsive improvements */
 @media (max-width: 768px) {
   .article-metadata {
@@ -246,4 +265,111 @@ a[href*="login"] {
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
   }
+
+  /* Mobile specific fixes for polling system */
+  .polling-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .polling-header .btn {
+    margin-left: 0;
+    margin-top: 1rem;
+    display: block;
+    width: 100%;
+  }
+
+  /* Stack vote and results buttons vertically on mobile */
+  .article-metadata .d-flex.gap-2 {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .article-metadata .d-flex.gap-2 .btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  /* Adjust navbar brand font size for mobile */
+  .navbar-brand {
+    font-size: 1.5rem;
+  }
+
+  /* Ensure navbar toggler is visible and working */
+  .navbar-toggler {
+    border: 1px solid #cbd5db;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .navbar-toggler:focus {
+    box-shadow: 0 0 0 0.2rem rgba(203, 213, 219, 0.25);
+  }
+
+  .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28203, 213, 219, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='m4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+  }
+}
+/* Add this to your main.css file to fix percentage visibility */
+
+/* Results page percentage text visibility fix */
+.text-muted {
+  color: #adb5bd !important; /* Lighter gray that's visible on dark background */
+}
+
+/* Specific fix for percentage text in poll results */
+.card-body .text-muted {
+  color: #cbd5db !important; /* Even lighter for better contrast */
+  font-weight: 500; /* Slightly bolder for better readability */
+}
+
+/* Alternative approach - target the specific percentage text */
+.card-body .ms-2.text-muted {
+  color: #f8f9fa !important; /* Nearly white for maximum visibility */
+  font-weight: 600;
+}
+/* Add this to your main.css file to make form fields dark */
+
+/* Dark theme form controls */
+.form-control {
+  background-color: #343a40 !important; /* Dark gray background */
+  color: #f8f9fa !important; /* Light text */
+  border: 1px solid #495057 !important; /* Dark border */
+}
+
+/* Form control focus state */
+.form-control:focus {
+  background-color: #495057 !important; /* Slightly lighter when focused */
+  color: #ffffff !important; /* White text when focused */
+  border-color: #3c6685 !important; /* Blue border to match your theme */
+  box-shadow: 0 0 0 0.2rem rgba(60, 102, 133, 0.25) !important; /* Subtle glow */
+  outline: none !important;
+}
+
+/* Placeholder text styling */
+.form-control::placeholder {
+  color: #adb5bd !important; /* Light gray placeholder text */
+  opacity: 1 !important;
+}
+
+/* Form control on hover */
+.form-control:hover:not(:focus) {
+  border-color: #6c757d !important; /* Slightly lighter border on hover */
+}
+
+/* Ensure form labels are visible */
+.form-control-label,
+.form-group label {
+  color: #f8f9fa !important; /* Light text for labels */
+  font-weight: 500;
+}
+
+/* Style the legend (form section headers) */
+legend {
+  color: #ffffff !important;
+  border-bottom-color: #495057 !important;
+}
+
+/* Help text styling */
+.form-text {
+  color: #adb5bd !important;
 }
